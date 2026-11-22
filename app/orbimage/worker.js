@@ -101,8 +101,7 @@ async function process(task, img, onLoaded) {
 
 self.onmessage = async ({ data: { task, blob } }) => {
   try {
-    const out = await process(task, await RawImage.fromBlob(blob), () => self.postMessage({ type: "status", text: "Đang xử lý…" }));
-    const img = Array.isArray(out) ? out[0] : out;
+    const img = await process(task, await RawImage.fromBlob(blob), () => self.postMessage({ type: "status", text: "Đang xử lý…" }));
     self.postMessage({ type: "done", blob: await img.toBlob("image/png"), w: img.width, h: img.height });
   } catch (e) {
     self.postMessage({ type: "error", text: String(e?.message ?? e) });

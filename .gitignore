@@ -4,3 +4,4 @@ out/
 .env*
 .claude/
 next-env.d.ts
+*.tsbuildinfo

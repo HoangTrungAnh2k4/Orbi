@@ -25,9 +25,9 @@ export default function OrbImage() {
 
   const pick = async (blob, name = "image.png") => {
     setNotice("");
+    const t = ++pickToken.current; // tăng cả khi file hỏng, để ảnh chọn trước đang decode không được áp dụng
     // type rỗng (vd HEIC/AVIF trên Windows) thì cứ thử decode, để createImageBitmap quyết
     if (blob.type && !blob.type.startsWith("image/")) return setNotice("File này không phải ảnh.");
-    const t = ++pickToken.current;
     const img = await createImageBitmap(blob).catch(() => null);
     const { width: w, height: h } = img ?? {};
     img?.close();
@@ -111,9 +111,9 @@ export default function OrbImage() {
   const size = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);
 
   return (
-    <main className="page">
+    <main className="page" data-tool="orbimage">
       <header className={s.header}>
-        <Link href="/orbimage" className={`logo ${s.logo}`}>Orb<span>Image</span></Link>
+        <Link href="/orbimage" className={s.logo}>Orb<span>Image</span></Link>
         <Link href="/" className={s.back}>← Orbi</Link>
       </header>
 

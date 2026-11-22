@@ -1,59 +1,161 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* dark: variant của shadcn bật khi tool đánh dấu data-dark trên <main> */
+@custom-variant dark (&:is([data-dark] *, [data-dark]));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --text-wordmark: clamp(3rem, 5vw, 4.5rem);
+  --text-wordmark--line-height: 0.85;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* ---------- Theme từng nơi. Hex chỉ được nằm trong các block này. ---------- */
+
+/* Hub: hệ quỹ đạo giữa dải ngân hà, lõi là ngôi sao vàng */
 :root {
-  --bg: #fafaf9;
-  --surface: #ffffff;
-  --text: #1c1c1a;
-  --muted: #6b6b66;
-  --border: #e5e4df;
-  --border-strong: #cfcec8;
-  --accent: #4f46e5;
-  --accent-bg: #eef2ff;
+  --background: #0a0b24;
+  --foreground: #eceaff;
+  --card: #1a1b4a;
+  --card-foreground: #eceaff;
+  --popover: #1a1b4a;
+  --popover-foreground: #eceaff;
+  --primary: #ffcf5c;
+  --primary-foreground: #0a0b24;
+  --secondary: #1a1b4a;
+  --secondary-foreground: #eceaff;
+  --muted: #1a1b4a;
+  --muted-foreground: #a9a6d8;
+  --accent: #1a1b4a;
+  --accent-foreground: #eceaff;
+  --destructive: #ff6b81;
+  --border: #6366b8;
+  --input: #6366b8;
+  --ring: #ffcf5c;
+  --radius: 0.625rem;
+}
+
+/* OrbImage: bàn làm việc sáng, gọn, accent xanh dương (chưa chuyển sang Tailwind) */
+:root:has([data-tool="orbimage"]) {
+  --background: #e8ebf0;
+  --foreground: #141925;
+  --card: #f5f7fa;
+  --muted-foreground: #5c6475;
+  --border: #c9cfd9;
+  --border-strong: #a9b1bf;
+  --primary: #1f4fe0;
+  --primary-soft: #d9e1f8;
+  --ring: #1f4fe0;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141413;
-    --surface: #1e1e1c;
-    --text: #ededea;
-    --muted: #9a9a94;
-    --border: #2e2e2b;
-    --border-strong: #45453f;
-    --accent: #818cf8;
-    --accent-bg: #23234a;
+  :root:has([data-tool="orbimage"]) {
+    --background: #0f131b;
+    --foreground: #e4e8ef;
+    --card: #171c26;
+    --muted-foreground: #8a93a5;
+    --border: #262d3a;
+    --border-strong: #3a4354;
+    --primary: #7c9bff;
+    --primary-soft: #1a2442;
+    --ring: #7c9bff;
   }
 }
 
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); }
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { @apply font-sans; }
+  body { @apply bg-background text-foreground; }
+}
 
+/* ---------- Hub: phần Tailwind utility không diễn tả gọn được ---------- */
+@layer components {
+  .galaxy {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(1px 1px at 20px 30px, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 140px 90px, #cfd3ff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 90px 170px, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 210px 220px, #ffe6c2 50%, transparent 51%),
+      radial-gradient(1px 1px at 260px 60px, #fff 50%, transparent 51%),
+      radial-gradient(2px 2px at 330px 260px, #e6e4ff 50%, transparent 51%),
+      radial-gradient(1px 1px at 50px 290px, #fff 50%, transparent 51%),
+      radial-gradient(1px 1px at 410px 130px, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 180px 400px, #dcd8ff 50%, transparent 51%),
+      radial-gradient(1px 1px at 470px 350px, #ffe6c2 50%, transparent 51%),
+      radial-gradient(ellipse 45% 55% at 74% 48%, rgba(124, 58, 237, .32), transparent 70%),
+      radial-gradient(ellipse 60% 35% at 60% 70%, rgba(37, 99, 235, .22), transparent 70%),
+      radial-gradient(ellipse 30% 40% at 85% 25%, rgba(236, 72, 153, .14), transparent 70%);
+    background-size: 360px 320px, 360px 320px, 360px 320px, 360px 320px, 360px 320px, 360px 320px, 360px 320px, 530px 470px, 530px 470px, 530px 470px, auto, auto, auto;
+    background-attachment: fixed;
+  }
+  @media (max-width: 767px) {
+    .galaxy { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, -30vw -25vh, 0 -20vh, 0 0; }
+  }
+
+  /* chấm chữ i trong wordmark: ngôi sao nhỏ phát sáng, đo theo em để to nhỏ cùng chữ.
+     left = tâm thân chữ ı của Bricolage 800 (đo tay), không dùng 50% vì tracking âm làm khung hẹp lại */
+  .sun-dot {
+    position: absolute; left: 0.14em; top: 0.23em; width: 0.17em; height: 0.17em; translate: -50% 0;
+    border-radius: 50%; background: radial-gradient(circle, #fffaf0 0, var(--primary) 55%, #ffb347 100%);
+    box-shadow: 0 0 0.12em var(--primary), 0 0 0.45em color-mix(in oklab, var(--primary) 55%, transparent);
+  }
+
+  /* list dài thì bản đồ dính giữa màn hình, không trôi mất khi cuộn */
+  @media (min-width: 768px) {
+    .orrery { position: sticky; top: max(24px, calc(50vh - 280px)); }
+  }
+  .orrery .ring { fill: none; stroke: var(--muted-foreground); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 0.1 8; opacity: .7; }
+  .orrery .orbit.on .ring { stroke: var(--foreground); stroke-width: 1; stroke-dasharray: none; opacity: 1; }
+  .orrery .core { fill: url(#star); }
+  .orrery .halo { fill: url(#halo); pointer-events: none; }
+  .orrery .star-0 { stop-color: #fffaf0; }
+  .orrery .star-1 { stop-color: #ffe08a; }
+  .orrery .star-2 { stop-color: #ffb347; }
+  .orrery .halo-0 { stop-color: var(--primary); stop-opacity: .35; }
+  .orrery .halo-1 { stop-color: var(--primary); stop-opacity: 0; }
+  .orrery .core-label { text-anchor: middle; font-size: 15px; font-weight: 700; fill: var(--background); letter-spacing: -0.02em; }
+  .orrery .hit { fill: transparent; }
+  .orrery .planet { fill: var(--background); stroke: var(--foreground); stroke-width: 2; transition: fill .2s, r .2s; }
+  .orrery .planet-label { font-size: 15px; font-weight: 600; fill: var(--foreground); }
+  .orrery .body.on .planet { fill: var(--primary); stroke: var(--primary); r: 11px; filter: drop-shadow(0 0 6px var(--primary)); }
+  .orrery a { cursor: pointer; }
+  /* nhiều tool thì chỉ hiện tên hành tinh đang chọn/đang trỏ, không thì chữ đè nhau */
+  .orrery.crowded .planet-label { opacity: 0; transition: opacity .15s; pointer-events: none; }
+  .orrery.crowded .body.on .planet-label, .orrery.crowded .body:hover .planet-label { opacity: 1; }
+
+  .orrery .spin { animation: orbit var(--dur) linear infinite; }
+  .orrery .spin.counter { animation-name: orbit-back; }
+  .orrery:hover .spin { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) { .orrery .spin { animation-play-state: paused; } }
+}
+
+@keyframes orbit { from { transform: rotate(var(--a)); } to { transform: rotate(calc(var(--a) + 360deg)); } }
+@keyframes orbit-back { from { transform: rotate(calc(-1 * var(--a))); } to { transform: rotate(calc(-1 * var(--a) - 360deg)); } }
+
+/* ---------- Legacy: OrbImage còn dùng, xóa khi tool đó chuyển sang Tailwind ---------- */
 .page { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
-.header { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 32px; }
-.logo { font-size: 20px; font-weight: 500; }
-
-.search { position: relative; flex: 1; max-width: 420px; min-width: 220px; }
-.search input {
-  width: 100%; height: 40px; padding: 0 64px 0 14px; font: inherit; font-size: 14px;
-  color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; outline: none;
-}
-.search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
-.search kbd {
-  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-  font: inherit; font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px;
-}
-
-.section { margin-bottom: 32px; }
-.section h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0 0 12px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-
-.cell {
-  display: block; padding: 16px; text-decoration: none; color: inherit;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  transition: border-color .15s, transform .15s;
-}
-.cell:hover { border-color: var(--border-strong); transform: translateY(-1px); }
-.cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.icon {
-  width: 36px; height: 36px; display: grid; place-items: center; font-size: 18px;
-  background: var(--accent-bg); color: var(--accent); border-radius: 10px; margin-bottom: 12px;
-}
-.name { font-size: 15px; font-weight: 500; }
-.desc { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.empty { color: var(--muted); font-size: 14px; }
