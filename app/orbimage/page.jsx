@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
+import { Lexend } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import s from "./image.module.css";
 import { FORMATS, MAX_SIDE, convert, outName, tooBig } from "./convert.mjs";
 
+const lexend = Lexend({ subsets: ["latin", "latin-ext", "vietnamese"], variable: "--font-display" });
 const TABS = { removebg: "Xóa nền", upscale: "Upscale", convert: "Đổi định dạng" };
 const CANCELLED = "Đã hủy.";
 
@@ -111,7 +113,7 @@ export default function OrbImage() {
   const size = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);
 
   return (
-    <main className="page" data-tool="orbimage">
+    <main className={`page ${s.root} ${lexend.variable}`} data-tool="orbimage">
       <header className={s.header}>
         <Link href="/orbimage" className={s.logo}>Orb<span>Image</span></Link>
         <Link href="/" className={s.back}>← Orbi</Link>
@@ -149,7 +151,7 @@ export default function OrbImage() {
         onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setDrag(false)} onDrop={onDrop}>
         <input type="file" accept="image/*" className={s.file}
           onChange={(e) => { const f = e.target.files[0]; f && pick(f, f.name); e.target.value = ""; }} />
-        {file ? <img src={file.url} alt="Ảnh gốc" /> : <span>Kéo thả, bấm để chọn, hoặc Ctrl V để dán ảnh</span>}
+        {file ? <img src={file.url} alt="Ảnh gốc" /> : <span className={s.cta}><strong>Thả ảnh vào đây</strong><span>hoặc bấm để chọn file, Ctrl V để dán</span></span>}
       </label>
       {file && <p className={s.meta}>{file.name} · {file.w}×{file.h} · {size(file.blob.size)}</p>}
 
@@ -164,7 +166,7 @@ export default function OrbImage() {
           <div className={s.checker}><img src={result.url} alt="Kết quả" /></div>
           <p className={s.meta}>
             {result.w}×{result.h} · {size(result.size)}
-            <a className={s.primary} href={result.url} download={result.name}>Tải về</a>
+            <a className={s.primary} href={result.url} download={result.name}>Tải ảnh về</a>
           </p>
         </section>
       )}

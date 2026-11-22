@@ -60,30 +60,21 @@
   --radius: 0.625rem;
 }
 
-/* OrbImage: bàn làm việc sáng, gọn, accent xanh dương (chưa chuyển sang Tailwind) */
+/* OrbImage: bàn đèn soi ảnh, mặt kính trắng kẻ ô xanh nhạt trên nền trời sớm (chưa chuyển sang Tailwind) */
 :root:has([data-tool="orbimage"]) {
-  --background: #e8ebf0;
-  --foreground: #141925;
-  --card: #f5f7fa;
-  --muted-foreground: #5c6475;
-  --border: #c9cfd9;
-  --border-strong: #a9b1bf;
-  --primary: #1f4fe0;
-  --primary-soft: #d9e1f8;
-  --ring: #1f4fe0;
-}
-@media (prefers-color-scheme: dark) {
-  :root:has([data-tool="orbimage"]) {
-    --background: #0f131b;
-    --foreground: #e4e8ef;
-    --card: #171c26;
-    --muted-foreground: #8a93a5;
-    --border: #262d3a;
-    --border-strong: #3a4354;
-    --primary: #7c9bff;
-    --primary-soft: #1a2442;
-    --ring: #7c9bff;
-  }
+  --background: #eef5fc;
+  --foreground: #1a2b45;
+  --card: #ffffff;
+  --muted-foreground: #566a86;
+  --border: #c9d9ee;
+  --border-strong: #6f87ab;
+  --primary: #2a6bd1;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e1ecfb;
+  --grid: #dbe7f6;
+  --grid-major: #bfd4ef;
+  --ring: #2a6bd1;
+  --destructive: #b42339;
 }
 
 @layer base {
