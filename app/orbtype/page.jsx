@@ -6,6 +6,7 @@ import s from "./typing.module.css";
 import { randomWords } from "./words";
 import { textWords } from "./passage";
 import { computeStats, sameBase } from "./stats.mjs";
+import { applyInput } from "./input";
 
 const mono = Roboto_Mono({ subsets: ["latin", "vietnamese"], weight: ["400"] });
 const MODES = { time: [15, 30, 60, 120], words: [10, 25, 50, 100] };
@@ -143,43 +144,17 @@ export default function Typing() {
     return () => window.removeEventListener("keydown", onKey);
   }, [restart]);
 
-  // ô gõ giữ đúng từ đang gõ; có khoảng trắng nghĩa là chốt từ
+  // ô gõ giữ đúng từ đang gõ, logic nằm ở input.ts
   const onInput = (e) => {
     const game = g.current;
     const box = e.currentTarget;
     if (!game || game.result) { box.value = ""; return; }
     if (timeUp(game)) { box.value = ""; finish(game); bump(); return; }
-    // NFC: bộ gõ kiểu "Unicode tổ hợp" gửi chữ gốc + dấu riêng, gộp lại cho khớp đề.
-    // Thường mỗi event 1 ký tự, nhưng paste/gõ nhanh có thể ra nhiều từ: phần trước mỗi khoảng trắng là từ đã chốt
-    const parts = box.value.normalize("NFC").split(/\s/);
-    let v = "";
-    for (let k = 0; k < parts.length && !game.result; k++) {
-      const w = game.words[game.cur];
-      const t = game.typed[game.cur];
-      v = parts[k].slice(0, w.length + 10);
-      // chỉ đếm phím khi từ dài thêm; bộ gõ thay "nao" thành "nào" không tính là gõ thêm
-      if (v.length > t.length) {
-        if (!game.start) game.start = Date.now();
-        for (let j = t.length; j < v.length; j++) {
-          game.keys.total++;
-          if (sameBase(v[j], w[j] ?? "")) game.keys.correct++;
-        }
-      }
-      game.typed[game.cur] = v;
-      if (k === parts.length - 1) {
-        if (game.mode === "words" && game.cur === game.words.length - 1 && v === w) { game.cur++; finish(game); }
-      } else if (v) {
-        game.keys.total++;
-        if (v === w) game.keys.correct++;
-        game.cur++;
-        game.typed.push("");
-        if (game.cur >= game.words.length) finish(game);
-        // mode time + đoạn văn: còn ~15 từ Gemini thì xin đoạn tiếp, khỏi gõ sang hàng bù không liên quan
-        else if (game.mode === "time" && game.real !== undefined && !game.more && game.cur >= game.real - 15) loadMore(game, ctrl.current.signal, bump);
-      }
-    }
-    // chỉ ghi lại ô khi có chốt từ hoặc bị cắt, để không phá chữ bộ gõ đang ghép dở
-    if (box.value !== v && (parts.length > 1 || parts[0].length > v.length)) box.value = game.result ? "" : v;
+    const { value, done } = applyInput(game, box.value, Date.now());
+    if (done) finish(game);
+    // mode time + đoạn văn: còn ~15 từ Gemini thì xin đoạn tiếp, khỏi gõ sang hàng bù không liên quan
+    else if (game.mode === "time" && game.real !== undefined && !game.more && game.cur >= game.real - 15) loadMore(game, ctrl.current.signal, bump);
+    if (value !== null) box.value = value;
     bump();
   };
 

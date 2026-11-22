@@ -12,6 +12,12 @@ export function rateLimit(key: string, max: number, windowMs: number, now = Date
   return ++h.count <= max;
 }
 
+// trả lại 1 lượt đã tính, vd request qua được trần IP nhưng bị trần khác chặn thì không nên phạt IP đó
+export function refund(key: string) {
+  const h = hits.get(key);
+  if (h && h.count > 0) h.count--;
+}
+
 // IP thật nằm ở phần tử đầu x-forwarded-for khi chạy sau proxy ghi đè header (Vercel, Nginx...).
 // Không có proxy thì client giả được header này, nên route nào tốn tiền cũng phải có thêm trần chung (key "global").
 export const clientIp = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
