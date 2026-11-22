@@ -36,3 +36,10 @@ test("mọi model đều limit thì báo lỗi gộp", async () => {
   const fetcher = fake({ e: () => new Response("", { status: 429 }), f: () => new Response("", { status: 503 }) }, []);
   await assert.rejects(gemini("p", { models: ["e", "f"], fetcher }), /e: 429[\s\S]*f: 503/);
 });
+
+test("client đã bỏ (signal abort) thì không gọi model nào nữa", async () => {
+  const calls: string[] = [];
+  const fetcher = fake({ h: () => ok("x") }, calls);
+  await assert.rejects(gemini("p", { models: ["h"], fetcher, signal: AbortSignal.abort() }));
+  assert.deepEqual(calls, []);
+});

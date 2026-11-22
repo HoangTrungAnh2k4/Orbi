@@ -11,15 +11,17 @@ const TIMEOUT = 10_000; // mỗi model; treo thì bỏ qua thử model kế
 const blockedUntil = new Map<string, number>();
 
 type GeminiRes = { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-type Opts = { models?: string[]; temperature?: number; fetcher?: typeof fetch };
+// signal: thường là req.signal, client bỏ đi thì ngừng gọi Gemini cho đỡ tốn quota
+type Opts = { models?: string[]; temperature?: number; fetcher?: typeof fetch; signal?: AbortSignal };
 
-export async function gemini(prompt: string, { models = GEMINI_MODELS, temperature = 1, fetcher = fetch }: Opts = {}): Promise<string> {
+export async function gemini(prompt: string, { models = GEMINI_MODELS, temperature = 1, fetcher = fetch, signal }: Opts = {}): Promise<string> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("Thiếu GEMINI_API_KEY trong .env.local");
   // model đang nghỉ thì để cuối, vẫn thử nếu mọi model khác đều hỏng
   const order = [...models].sort((a, b) => Number((blockedUntil.get(a) ?? 0) > Date.now()) - Number((blockedUntil.get(b) ?? 0) > Date.now()));
   const errors: string[] = [];
   for (const model of order) {
+    if (signal?.aborted) break;
     // lỗi gì cũng thử model kế: 4xx có thể chỉ riêng model đó (tier, bị gỡ), key sai thì cũng chỉ tốn vài request hỏng
     try {
       const res = await fetcher(`${API}/${model}:generateContent`, {
@@ -27,7 +29,7 @@ export async function gemini(prompt: string, { models = GEMINI_MODELS, temperatu
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature } }),
         cache: "no-store",
-        signal: AbortSignal.timeout(TIMEOUT),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT)]) : AbortSignal.timeout(TIMEOUT),
       });
       if (!res.ok) {
         if (res.status === 429) blockedUntil.set(model, Date.now() + COOLDOWN);

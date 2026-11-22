@@ -29,13 +29,17 @@
 }
 .config button { background: none; border: 0; color: var(--sub); font: inherit; cursor: pointer; padding: 2px 4px; }
 .config button:hover { color: var(--text); }
-.config .on { color: var(--main); }
+/* đang chọn: màu accent + gạch chân, không chỉ dựa vào màu */
+.config .on { color: var(--main); text-decoration: underline 2px; text-underline-offset: 5px; }
+.config button:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; border-radius: 4px; }
 .sep { width: 2px; background: var(--bg); border-radius: 2px; }
 
 .counter { font-size: 26px; color: var(--main); height: 36px; }
 .note { font-size: 13px; min-height: 1.5em; margin: -16px 0 0; }
 
 .words { height: calc(3 * 1.6em); overflow: hidden; font-size: 26px; line-height: 1.6; position: relative; }
+/* ô gõ ẩn: vẫn nhận focus và bộ gõ, caret trên chữ là chỗ hiển thị */
+.input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
 .track { display: flex; flex-wrap: wrap; transition: transform .12s; position: relative; }
 .word { margin-right: .5em; border-bottom: 2px solid transparent; height: 1.6em; }
 .word.bad { border-bottom-color: var(--error); }
