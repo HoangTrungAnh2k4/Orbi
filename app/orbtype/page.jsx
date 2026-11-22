@@ -52,7 +52,12 @@ export default function Typing() {
     const onKey = (e) => {
       const game = g.current;
       if (!game) return;
-      if (e.key === "Tab" || e.key === "Escape") { e.preventDefault(); restart(); return; }
+      // interval 100ms có thể trễ, phím gõ sau khi hết giờ không được tính (check trước Tab để không lỡ tay restart mất kết quả)
+      if (game.mode === "time" && game.start && !game.result && Date.now() - game.start >= game.amount * 1000) { e.preventDefault(); finish(game); bump(); return; }
+      // Tab chỉ restart khi đang gõ, ngoài ra để Tab di chuyển focus bình thường cho người dùng bàn phím
+      if (e.key === "Escape" || (e.key === "Tab" && game.start && !game.result)) { e.preventDefault(); restart(); return; }
+      // chưa gõ mà đang focus nút/link (đã Tab tới) thì để Space/Enter bấm nút như bình thường
+      if (!game.start && (e.key === " " || e.key === "Enter") && e.target.closest?.(e.key === " " ? "button" : "button, a")) return; // link không ăn Space, để game nuốt cho khỏi cuộn trang
       if (game.result || (e.ctrlKey && e.key !== "Backspace") || e.metaKey || e.altKey) return;
       const w = game.words[game.cur];
       const t = game.typed[game.cur];
@@ -72,7 +77,8 @@ export default function Typing() {
         if (game.cur >= game.words.length) finish(game);
       } else if (e.key.length === 1) {
         if (t.length >= w.length + 10) return;
-        if (!game.start) game.start = Date.now();
+        // bỏ focus khỏi nút (nếu đã Tab tới) để Enter/space không bấm nhầm nút config giữa lúc gõ
+        if (!game.start) { game.start = Date.now(); document.activeElement?.blur(); }
         game.keys.total++;
         if (e.key === w[t.length]) game.keys.correct++;
         game.typed[game.cur] = t + e.key;
@@ -164,7 +170,7 @@ export default function Typing() {
         <button className={s.restart} onClick={pick(restart)} aria-label="Làm lại">↻</button>
       </main>
 
-      <footer className={`${s.inner} ${s.footer}`}><kbd>tab</kbd> hoặc <kbd>esc</kbd> - làm lại</footer>
+      <footer className={`${s.inner} ${s.footer}`}><kbd>esc</kbd> (hoặc <kbd>tab</kbd> khi đang gõ) - làm lại</footer>
     </div>
   );
 }

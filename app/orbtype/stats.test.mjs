@@ -16,3 +16,9 @@ test("từ sai, thừa, thiếu và từ đang gõ dở", () => {
   assert.equal(s.wpm, 2); // chỉ tính "e" đang gõ dở: 1 ký tự
   assert.equal(s.acc, 50);
 });
+
+test("mode words: từ cuối sai, chốt bằng space thì space đó vẫn tính vào raw", () => {
+  const s = computeStats(["ab", "cd"], ["ab", "cx", ""], 2, { correct: 5, total: 6 }, 6000);
+  assert.equal(s.raw, 12); // ab + space + cx + space = 6 ký tự
+  assert.equal(s.wpm, 6); // chỉ "ab " đúng = 3 ký tự
+});

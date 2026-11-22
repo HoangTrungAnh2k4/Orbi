@@ -3,7 +3,9 @@
 export function computeStats(words, typed, cur, keys, ms) {
   const chars = { correct: 0, incorrect: 0, extra: 0, missed: 0 };
   let correctChars = 0; // chỉ tính từ gõ đúng hoàn toàn (+ dấu cách), như kiểu WPM chuẩn
-  let rawChars = Math.min(cur, words.length - 1); // dấu cách đã gõ
+  // mỗi lần bấm space là typed thêm 1 ô, nên số space đã gõ = typed.length - 1
+  // (kể cả space chốt từ cuối ở mode words khi từ đó sai)
+  let rawChars = typed.length - 1;
 
   for (let i = 0; i <= Math.min(cur, words.length - 1); i++) {
     const w = words[i];
