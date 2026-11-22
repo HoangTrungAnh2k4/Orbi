@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStats } from "./stats.mjs";
+import { computeStats, sameBase } from "./stats.mjs";
 
 test("gõ đúng hết 2 từ trong 6 giây", () => {
   const s = computeStats(["ab", "cd"], ["ab", "cd"], 2, { correct: 5, total: 5 }, 6000);
@@ -21,4 +21,11 @@ test("mode words: từ cuối sai, chốt bằng space thì space đó vẫn tí
   const s = computeStats(["ab", "cd"], ["ab", "cx", ""], 2, { correct: 5, total: 6 }, 6000);
   assert.equal(s.raw, 12); // ab + space + cx + space = 6 ký tự
   assert.equal(s.wpm, 6); // chỉ "ab " đúng = 3 ký tự
+});
+
+test("sameBase: so chữ gốc, bỏ dấu tiếng Việt", () => {
+  assert.ok(sameBase("e", "ệ"));
+  assert.ok(sameBase("ơ", "ở"));
+  assert.ok(sameBase("d", "đ"));
+  assert.ok(!sameBase("a", "e"));
 });

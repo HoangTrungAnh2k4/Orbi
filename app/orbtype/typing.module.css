@@ -33,21 +33,41 @@
 .sep { width: 2px; background: var(--bg); border-radius: 2px; }
 
 .counter { font-size: 26px; color: var(--main); height: 36px; }
+.note { font-size: 13px; min-height: 1.5em; margin: -16px 0 0; }
 
 .words { height: calc(3 * 1.6em); overflow: hidden; font-size: 26px; line-height: 1.6; position: relative; }
-.track { display: flex; flex-wrap: wrap; transition: transform .12s; }
+.track { display: flex; flex-wrap: wrap; transition: transform .12s; position: relative; }
 .word { margin-right: .5em; border-bottom: 2px solid transparent; height: 1.6em; }
 .word.bad { border-bottom-color: var(--error); }
 .correct { color: var(--text); }
 .incorrect { color: var(--error); }
 .extra { color: var(--error-extra); }
 
+/* mark: điểm neo vô hình trong chữ; caret: thanh thật trượt mượt tới mark */
+.mark { display: inline-block; width: 0; height: 1.1em; vertical-align: -0.15em; }
 .caret {
-  display: inline-block; width: 2px; height: 1.1em; margin-right: -2px; vertical-align: -0.15em;
+  position: absolute; left: -1px; top: 0; width: 2px; height: 1.1em;
   background: var(--main); border-radius: 2px;
+  transform: translate(var(--x, 0), var(--y, 0)); transition: transform .1s ease-out;
 }
 .idle .caret { animation: blink 1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+
+/* skeleton 3 dòng chữ, ánh sáng quét ngang trong lúc Gemini viết */
+.skeleton { position: absolute; inset: 0; display: grid; grid-template-rows: repeat(3, 1.6em); align-items: center; }
+.skeleton span {
+  height: .7em; border-radius: 6px; --dim: color-mix(in srgb, var(--sub) 30%, transparent);
+  background: linear-gradient(90deg, var(--dim) 30%, color-mix(in srgb, var(--sub) 75%, transparent) 50%, var(--dim) 70%);
+  background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite;
+}
+.skeleton span:nth-child(2) { width: 85%; animation-delay: .15s; }
+.skeleton span:nth-child(3) { width: 55%; animation-delay: .3s; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .track, .caret { transition: none; }
+  .idle .caret { animation: none; }
+  .skeleton span { animation: none; }
+}
 
 .restart { align-self: center; background: none; border: 0; color: var(--sub); font-size: 20px; cursor: pointer; padding: 8px 16px; border-radius: 8px; }
 .restart:hover, .restart:focus-visible { color: var(--text); background: var(--sub-bg); outline: none; }

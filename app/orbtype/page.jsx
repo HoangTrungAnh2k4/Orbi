@@ -3,15 +3,17 @@ import Link from "next/link";
 import { Roboto_Mono } from "next/font/google";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import s from "./typing.module.css";
-import { randomWords } from "./words";
-import { computeStats } from "./stats.mjs";
+import { randomWords, textWords } from "./words";
+import { computeStats, sameBase } from "./stats.mjs";
 
-const mono = Roboto_Mono({ subsets: ["latin"], weight: ["400"] });
+const mono = Roboto_Mono({ subsets: ["latin", "vietnamese"], weight: ["400"] });
 const MODES = { time: [15, 30, 60, 120], words: [10, 25, 50, 100] };
+const LANGS = { vi: "Vn", en: "En" };
+const SOURCES = { random: "ngẫu nhiên", text: "đoạn văn" };
 
 // shortcut: mode time sinh sẵn 300 từ (đủ cho 150 wpm × 120s), cần thì sinh thêm khi gần hết
-const newGame = (mode, amount) => ({
-  mode, amount, words: randomWords(mode === "time" ? 300 : amount),
+const newGame = (mode, amount, words) => ({
+  mode, amount, words,
   typed: [""], cur: 0, keys: { correct: 0, total: 0 }, start: 0, result: null,
 });
 
@@ -24,15 +26,35 @@ function finish(game) {
 export default function Typing() {
   const [mode, setMode] = useState("time");
   const [amount, setAmount] = useState(30);
+  const [lang, setLang] = useState("vi");
+  const [src, setSrc] = useState("random");
   const g = useRef(null); // state game để mutable cho nhanh, đổi xong thì rerender
   const [, rerender] = useState(0);
   const [now, setNow] = useState(0);
   const [offset, setOffset] = useState(0);
   const active = useRef(null);
+  const req = useRef(0); // id lần restart mới nhất, bỏ kết quả fetch cũ
+  const [note, setNote] = useState(""); // "" | "loading" | "fallback"
+  const mark = useRef(null); // vị trí caret trong chữ
+  const caret = useRef(null); // caret thật, trượt tới vị trí mark
   const bump = () => rerender((x) => x + 1);
 
   // sinh từ ở client (random lúc SSR sẽ lệch hydration)
-  const restart = useCallback(() => { g.current = newGame(mode, amount); bump(); }, [mode, amount]);
+  const restart = useCallback(() => {
+    const n = mode === "time" ? 300 : amount;
+    const id = ++req.current;
+    if (src === "random") { g.current = newGame(mode, amount, randomWords(n, lang)); setNote(""); bump(); return; }
+    g.current = null; setNote("loading"); bump();
+    // time: chỉ xin đủ cho ~150 wpm để Gemini trả nhanh (300 từ mất ~15s), gõ nhanh hơn thì phần bù bên dưới lo
+    fetch(`/orbtype/passage?lang=${lang}&n=${mode === "time" ? Math.ceil(amount * 2.5) : n}`, { signal: AbortSignal.timeout(45_000) }) // server thử tối đa 4 model × 10s
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((d) => [d.words, ""], () => [[], "fallback"])
+      .then(([words, note]) => {
+        if (id !== req.current) return; // đã restart/đổi option trong lúc chờ
+        // Gemini có thể viết thiếu từ, bù bằng đoạn văn có sẵn
+        g.current = newGame(mode, amount, [...words, ...textWords(n, lang)].slice(0, n)); setNote(note); bump();
+      });
+  }, [mode, amount, lang, src]);
   useEffect(restart, [restart]);
 
   const game = g.current;
@@ -51,7 +73,8 @@ export default function Typing() {
   useEffect(() => {
     const onKey = (e) => {
       const game = g.current;
-      if (!game) return;
+      // đang chờ đoạn văn: Esc vẫn cho tải lại
+      if (!game) { if (e.key === "Escape") restart(); return; }
       // interval 100ms có thể trễ, phím gõ sau khi hết giờ không được tính (check trước Tab để không lỡ tay restart mất kết quả)
       if (game.mode === "time" && game.start && !game.result && Date.now() - game.start >= game.amount * 1000) { e.preventDefault(); finish(game); bump(); return; }
       // Tab chỉ restart khi đang gõ, ngoài ra để Tab di chuyển focus bình thường cho người dùng bàn phím
@@ -80,8 +103,9 @@ export default function Typing() {
         // bỏ focus khỏi nút (nếu đã Tab tới) để Enter/space không bấm nhầm nút config giữa lúc gõ
         if (!game.start) { game.start = Date.now(); document.activeElement?.blur(); }
         game.keys.total++;
-        if (e.key === w[t.length]) game.keys.correct++;
-        game.typed[game.cur] = t + e.key;
+        if (sameBase(e.key, w[t.length] ?? "")) game.keys.correct++;
+        // NFC: bộ gõ kiểu "Unicode tổ hợp" gửi chữ gốc + dấu riêng, gộp lại cho khớp đề
+        game.typed[game.cur] = (t + e.key).normalize("NFC");
         if (game.mode === "words" && game.cur === game.words.length - 1 && game.typed[game.cur] === w) { game.cur++; finish(game); }
       } else return;
       bump();
@@ -94,6 +118,11 @@ export default function Typing() {
   useLayoutEffect(() => {
     const el = active.current;
     setOffset(el ? Math.max(0, el.offsetTop - el.offsetHeight) : 0);
+    // gán CSS var thẳng vào DOM để không phải rerender mỗi lần đo
+    if (mark.current && caret.current) {
+      caret.current.style.setProperty("--x", `${mark.current.offsetLeft}px`);
+      caret.current.style.setProperty("--y", `${mark.current.offsetTop}px`);
+    }
   });
 
   const pick = (fn) => (e) => { fn(); e.currentTarget.blur(); }; // bỏ focus để phím cách không bấm lại nút
@@ -114,6 +143,14 @@ export default function Typing() {
       <main className={`${s.inner} ${s.main}`}>
         {!r && (
           <div className={s.config} style={{ visibility: running ? "hidden" : "visible" }}>
+            {Object.entries(LANGS).map(([l, label]) => (
+              <button key={l} className={l === lang ? s.on : ""} aria-pressed={l === lang} onClick={pick(() => setLang(l))}>{label}</button>
+            ))}
+            <span className={s.sep} />
+            {Object.entries(SOURCES).map(([k, label]) => (
+              <button key={k} className={k === src ? s.on : ""} aria-pressed={k === src} onClick={pick(() => setSrc(k))}>{label}</button>
+            ))}
+            <span className={s.sep} />
             {Object.keys(MODES).map((m) => (
               <button key={m} className={m === mode ? s.on : ""}
                 onClick={pick(() => { setMode(m); setAmount(m === "time" ? 30 : 25); })}>{m}</button>
@@ -132,7 +169,7 @@ export default function Typing() {
               <div><div className={s.label}>acc</div><div className={s.value}>{r.acc}%</div></div>
             </div>
             <div className={s.small}>
-              <div><div className={s.label}>test type</div><div className={s.value}>{mode} {amount}</div></div>
+              <div><div className={s.label}>test type</div><div className={s.value}>{mode} {amount} {LANGS[lang]} {SOURCES[src]}</div></div>
               <div><div className={s.label}>raw</div><div className={s.value}>{r.raw}</div></div>
               <div title="correct / incorrect / extra / missed">
                 <div className={s.label}>characters</div>
@@ -144,18 +181,25 @@ export default function Typing() {
         ) : (
           <>
             <div className={s.counter} aria-live="off">{counter}</div>
-            <div className={`${s.words} ${game?.start ? "" : s.idle}`} aria-label="Đoạn cần gõ">
+            <p className={s.note} role="status">
+              {note === "loading" ? "Đang nhờ Gemini viết đoạn văn…" : note === "fallback" ? "Không gọi được Gemini, tạm dùng đoạn văn có sẵn." : ""}
+            </p>
+            <div className={`${s.words} ${game?.start ? "" : s.idle}`} aria-label="Đoạn cần gõ" aria-busy={note === "loading"}>
+              {note === "loading" && <div className={s.skeleton} aria-hidden="true"><span /><span /><span /></div>}
               <div className={s.track} style={{ transform: `translateY(-${offset}px)` }}>
+                <span ref={caret} className={s.caret} aria-hidden="true" />
                 {game?.words.map((w, i) => {
                   const t = game.typed[i] ?? "";
                   const isCur = i === game.cur;
                   const letters = [];
                   for (let j = 0; j < Math.max(w.length, t.length); j++) {
-                    if (isCur && j === t.length) letters.push(<span key="c" className={s.caret} />);
-                    const cls = j >= w.length ? s.extra : j >= t.length ? "" : t[j] === w[j] ? s.correct : s.incorrect;
+                    if (isCur && j === t.length) letters.push(<span key="c" ref={mark} className={s.mark} />);
+                    // từ đang gõ dở: chưa bỏ dấu xong vẫn tính đúng, chốt từ (space) mới so chính xác
+                    const ok = isCur ? sameBase(t[j] ?? "", w[j] ?? "") : t[j] === w[j];
+                    const cls = j >= w.length ? s.extra : j >= t.length ? "" : ok ? s.correct : s.incorrect;
                     letters.push(<span key={j} className={cls}>{j < w.length ? w[j] : t[j]}</span>);
                   }
-                  if (isCur && t.length >= w.length) letters.push(<span key="c" className={s.caret} />);
+                  if (isCur && t.length >= w.length) letters.push(<span key="c" ref={mark} className={s.mark} />);
                   return (
                     <div key={i} ref={isCur ? active : null} className={`${s.word} ${i < game.cur && t !== w ? s.bad : ""}`}>
                       {letters}

@@ -31,3 +31,7 @@ export function computeStats(words, typed, cur, keys, ms) {
     seconds: Math.round(ms / 1000),
   };
 }
+
+// bỏ dấu tiếng Việt: Unikey/EVKey gõ "e" rồi mới thay bằng "ệ", nên chữ đang gõ dở chỉ cần khớp chữ gốc
+const base = (c) => c.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+export const sameBase = (a, b) => base(a) === base(b);
