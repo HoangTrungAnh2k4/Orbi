@@ -103,11 +103,11 @@ export default function Typing() {
     return () => clearInterval(id);
   }, [running]);
 
-  // có game mới (restart, đổi option) thì xoá ô gõ và focus lại
+  // có game mới (restart, đổi option) thì xoá ô gõ và focus lại; đang đứng trên nút (dùng bàn phím) thì giữ nguyên chỗ
   useEffect(() => {
     if (!input.current) return;
     input.current.value = "";
-    input.current.focus();
+    if (!document.activeElement?.closest("button")) input.current.focus();
   }, [game]);
 
   // keydown chỉ lo phím điều khiển; chữ đi qua ô input ẩn để bộ gõ (Unikey, Telex của Windows) ghép dấu được
@@ -194,7 +194,8 @@ export default function Typing() {
     }
   });
 
-  const pick = (fn) => () => { fn(); input.current?.focus(); }; // về ô gõ để phím cách không bấm lại nút
+  // bấm chuột thì về ô gõ để phím cách không bấm lại nút; Enter/Space (detail = 0) thì giữ focus cho người dùng bàn phím
+  const pick = (fn) => (e) => { fn(); if (e.detail) input.current?.focus(); };
 
   const elapsed = game?.start ? (now - game.start) / 1000 : 0;
   const counter = !running ? "" : mode === "time"
@@ -256,7 +257,7 @@ export default function Typing() {
             <div className={`${s.words} ${game?.start ? "" : s.idle}`} aria-label="Đoạn cần gõ" aria-busy={note === "loading"}
               onClick={() => input.current?.focus()}>
               <input ref={input} className={s.input} onInput={onInput} aria-label="Ô gõ" autoComplete="off"
-                autoCorrect="off" autoCapitalize="off" spellCheck={false} />
+                onPaste={(e) => e.preventDefault()} autoCorrect="off" autoCapitalize="off" spellCheck={false} />
               {note === "loading" && <div className={s.skeleton} aria-hidden="true"><span /><span /><span /></div>}
               <div className={s.track} style={{ transform: `translateY(-${offset}px)` }}>
                 <span ref={caret} className={s.caret} aria-hidden="true" />
