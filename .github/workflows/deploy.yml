@@ -1,0 +1,47 @@
+# Deploy lên Vercel bằng CLI. Project Vercel nằm ở tài khoản khác, không nối với repo GitHub này,
+# nên GitHub Actions tự build rồi đẩy bản build lên (vercel build + deploy --prebuilt).
+# Cần 3 secret trong repo: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
+# Env của app (GEMINI_API_KEY, ORBPLAY_ADMIN_PASSWORD, Upstash...) đặt trong project Vercel, vercel pull tự kéo về.
+name: Deploy Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # bấm tay trong tab Actions khi cần deploy lại
+
+# không cho 2 lần deploy production chạy chồng nhau, lần sau đợi lần trước xong
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # --ignore-scripts: giống máy dev, không chạy postinstall của onnxruntime-node (app chỉ dùng bản web trong trình duyệt)
+      - run: npm ci --ignore-scripts
+
+      # chặn deploy nếu code lỗi
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+
+      - run: npm install --global vercel@latest
+      - run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

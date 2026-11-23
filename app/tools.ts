@@ -7,5 +7,5 @@ export type Tool = { slug: string; name: string; desc: string; icon: IconType; c
 export const tools: Tool[] = [
   { slug: "orbtype", name: "OrbType", desc: "Đo WPM, độ chính xác", icon: LuKeyboard, category: "Tiện ích" },
   { slug: "orbimage", name: "OrbImage", desc: "Xóa nền, upscale, đổi định dạng", icon: LuImage, category: "Ảnh" },
-  { slug: "orbplay", name: "OrbPlay", desc: "Vòng quay, bốc thăm, lì xì, lật thẻ", icon: LuDices, category: "Giải trí" },
+  { slug: "orbplay", name: "OrbPlay", desc: "Mini game cho tiệc tất niên", icon: LuDices, category: "Giải trí" },
 ];

@@ -6,21 +6,22 @@ import { drawIndices } from "./random";
 import { normalize, scramble, type WordItem } from "./scramble";
 import { sfx } from "./fx";
 
-const ROUNDS = 5;
-const ROUND_MS = 30_000;
 const URGENT_S = 10; // còn chừng này giây thì thanh giờ chuyển màu và kêu tích tắc ở 5s cuối
 
 type Round = { item: WordItem; letters: string[] };
 type Phase = "idle" | "play" | "right" | "wrong" | "done";
 type Props = {
   words: WordItem[];
+  rounds: number;
+  seconds: number; // mỗi vòng
   onPlaying: (on: boolean) => void; // page khóa tab khi đang chơi, đổi tab sẽ mất ván
   play: (fn: () => void) => void;
   celebrate: (el: Element | null) => void;
   announce: (msg: string) => void;
 };
 
-export function WordGame({ words, onPlaying, play, celebrate, announce }: Props) {
+export function WordGame({ words, rounds: maxRounds, seconds, onPlaying, play, celebrate, announce }: Props) {
+  const roundMs = seconds * 1000;
   const [rounds, setRounds] = useState<Round[]>([]);
   const [idx, setIdx] = useState(0);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -49,7 +50,7 @@ export function WordGame({ words, onPlaying, play, celebrate, announce }: Props)
 
   // rs, i truyền tay thay vì đọc state để timer của vòng cũ không đọc nhầm vòng mới
   const begin = (rs: Round[], i: number) => {
-    const end = Date.now() + ROUND_MS;
+    const end = Date.now() + roundMs;
     setIdx(i);
     setGuess("");
     setPhase("play");
@@ -89,7 +90,7 @@ export function WordGame({ words, onPlaying, play, celebrate, announce }: Props)
 
   const start = () => {
     play(sfx.unlock);
-    const rs = drawIndices(words.length, Math.min(ROUNDS, words.length)).map((k) => ({ item: words[k], letters: scramble(words[k].word) }));
+    const rs = drawIndices(words.length, Math.min(maxRounds, words.length)).map((k) => ({ item: words[k], letters: scramble(words[k].word) }));
     setRounds(rs);
     resultsRef.current = [];
     setResults([]);
@@ -131,7 +132,7 @@ export function WordGame({ words, onPlaying, play, celebrate, announce }: Props)
           </>
         ) : (
           <p className="max-w-sm text-muted-foreground">
-            {words.length >= 2 ? `${Math.min(ROUNDS, words.length)} vòng, mỗi vòng 30 giây. Gõ lại từ gốc từ các chữ bị xáo, trả lời càng nhanh càng nhiều điểm.` : "Cần ít nhất 2 từ khóa trong bộ từ bên cạnh."}
+            {words.length >= 2 ? `${Math.min(maxRounds, words.length)} vòng, mỗi vòng ${seconds} giây. Gõ lại từ gốc từ các chữ bị xáo, trả lời càng nhanh càng nhiều điểm.` : "Cần ít nhất 2 từ khóa trong bộ từ bên cạnh."}
           </p>
         )}
         <Button size="lg" className="h-11 px-8 font-display text-xl font-bold" onClick={start} disabled={words.length < 2}>
@@ -141,7 +142,7 @@ export function WordGame({ words, onPlaying, play, celebrate, announce }: Props)
     );
   }
 
-  const urgent = phase === "play" && secLeft <= URGENT_S;
+  const urgent = phase === "play" && secLeft <= Math.min(URGENT_S, seconds / 3); // vòng ngắn thì không đỏ ngay từ đầu
   const shown = phase === "play" ? cur.letters : [...cur.item.word.toUpperCase().replace(/\s+/g, "")];
   return (
     <div ref={board} className="flex w-full flex-col gap-4">
@@ -150,7 +151,7 @@ export function WordGame({ words, onPlaying, play, celebrate, announce }: Props)
         <span><b className="font-display text-lg text-primary">{score}</b> điểm</span>
         <span className={urgent ? "font-bold text-destructive" : ""} aria-live="off">Còn <b className="font-display text-lg tabular-nums">{secLeft}s</b></span>
       </div>
-      <div className="timebar" data-urgent={urgent || undefined} style={{ "--left": phase === "play" ? (deadline - now) / ROUND_MS : 0 } as React.CSSProperties} aria-hidden />
+      <div className="timebar" data-urgent={urgent || undefined} style={{ "--left": phase === "play" ? (deadline - now) / roundMs : 0 } as React.CSSProperties} aria-hidden />
 
       <div className="flex flex-col items-center gap-4 rounded-2xl border bg-background px-3 py-6">
         <p className="text-sm text-muted-foreground">{cur.letters.length} chữ cái bị xáo trộn</p>

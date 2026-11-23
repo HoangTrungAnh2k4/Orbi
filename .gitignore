@@ -6,3 +6,5 @@ out/
 .claude/
 next-env.d.ts
 *.tsbuildinfo
+.data/
+.vercel/

@@ -10,8 +10,6 @@ import { Button } from "@/components/ui/button";
 import { makeRound, roundPoints, type OddRound } from "./odd";
 import { sfx } from "./fx";
 
-const TOTAL_MS = 45_000;
-const PENALTY_MS = 3_000; // bấm sai bị trừ giờ, khỏi bấm bừa
 const URGENT_MS = 10_000;
 
 type Icon = [IconType, string];
@@ -34,9 +32,10 @@ const PAIRS: [Icon, Icon][] = [
 ];
 
 type Phase = "idle" | "play" | "done";
-type Props = { onPlaying: (on: boolean) => void; play: (fn: () => void) => void; celebrate: (el: Element | null) => void; announce: (msg: string) => void };
+type Props = { seconds: number; penalty: number; onPlaying: (on: boolean) => void; play: (fn: () => void) => void; celebrate: (el: Element | null) => void; announce: (msg: string) => void };
 
-export function OddGame({ onPlaying, play, celebrate, announce }: Props) {
+export function OddGame({ seconds, penalty, onPlaying, play, celebrate, announce }: Props) {
+  const totalMs = seconds * 1000;
   const [phase, setPhase] = useState<Phase>("idle");
   const [round, setRound] = useState<OddRound | null>(null);
   const [passed, setPassed] = useState(0);
@@ -63,7 +62,7 @@ export function OddGame({ onPlaying, play, celebrate, announce }: Props) {
     setWrong(-1);
     setRound(makeRound(0, PAIRS.length));
     setPhase("play");
-    end.current = Date.now() + TOTAL_MS;
+    end.current = Date.now() + totalMs;
     setNow(Date.now());
     clearInterval(tick.current);
     tick.current = window.setInterval(() => {
@@ -89,10 +88,10 @@ export function OddGame({ onPlaying, play, celebrate, announce }: Props) {
       setRound(makeRound(stats.current.passed, PAIRS.length));
       play(() => sfx.count(true));
     } else {
-      end.current -= PENALTY_MS;
+      end.current -= penalty * 1000; // bấm sai bị trừ giờ, khỏi bấm bừa
       setWrong(i);
       play(sfx.miss);
-      announce("Sai, trừ 3 giây");
+      announce(`Sai, trừ ${penalty} giây`);
     }
   };
 
@@ -110,7 +109,7 @@ export function OddGame({ onPlaying, play, celebrate, announce }: Props) {
           </>
         ) : (
           <p className="max-w-sm text-muted-foreground">
-            Có {TOTAL_MS / 1000} giây. Mỗi vòng có đúng 1 ô khác các ô còn lại, bấm vào nó càng nhanh càng tốt. Bấm sai bị trừ {PENALTY_MS / 1000} giây, lưới to dần và icon giống nhau dần.
+            Có {seconds} giây. Mỗi vòng có đúng 1 ô khác các ô còn lại, bấm vào nó càng nhanh càng tốt. Bấm sai bị trừ {penalty} giây, lưới to dần và icon giống nhau dần.
           </p>
         )}
         <Button size="lg" className="h-11 px-8 font-display text-xl font-bold" onClick={start}>
@@ -129,7 +128,7 @@ export function OddGame({ onPlaying, play, celebrate, announce }: Props) {
         <span><b className="font-display text-lg text-primary">{score}</b> điểm</span>
         <span className={urgent ? "font-bold text-destructive" : ""}>Còn <b className="font-display text-lg tabular-nums">{Math.ceil(left / 1000)}s</b></span>
       </div>
-      <div className="timebar" data-urgent={urgent || undefined} style={{ "--left": left / TOTAL_MS } as React.CSSProperties} aria-hidden />
+      <div className="timebar" data-urgent={urgent || undefined} style={{ "--left": left / totalMs } as React.CSSProperties} aria-hidden />
       <p className="text-center text-muted-foreground">Bấm vào ô khác biệt</p>
       <ol
         key={passed}
