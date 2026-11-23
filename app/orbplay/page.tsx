@@ -2,13 +2,16 @@
 import Link from "next/link";
 import { Big_Shoulders, Big_Shoulders_Inline } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
-import { LuBrain, LuDices, LuGift, LuRotateCcw, LuRotateCw, LuShuffle, LuTicket, LuTrash2, LuVolume2, LuVolumeX } from "react-icons/lu";
+import { LuBrain, LuDices, LuGift, LuRotateCcw, LuRotateCw, LuScanSearch, LuShuffle, LuSpellCheck, LuTicket, LuTrash2, LuVolume2, LuVolumeX } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { drawIndices, expandPrizes, parseEntries, segmentAt, spinTo } from "./random";
 import { createFireworks, sfx } from "./fx";
 import { Envelopes, type Envelope } from "./envelopes";
 import { MemoryBoard } from "./cards";
+import { WordGame } from "./word";
+import { OddGame } from "./oddgame";
+import { parseWords } from "./scramble";
 import { flip, hideOpen, newMemory, solved, type Memory } from "./memory";
 
 const LEVELS = [{ label: "Dễ", pairs: 6 }, { label: "Vừa", pairs: 8 }, { label: "Khó", pairs: 12 }];
@@ -18,6 +21,18 @@ const display = Big_Shoulders({ subsets: ["latin", "vietnamese"], variable: "--f
 const marquee = Big_Shoulders_Inline({ subsets: ["latin"], weight: ["800"], variable: "--font-marquee" });
 const SAMPLE = "An\nBình\nChi\nDũng\nGiang\nHà";
 const PRIZES = "500.000đ\n200.000đ x2\n100.000đ x3\n50.000đ x4\nChúc may mắn lần sau x2";
+const WORDS = `TEAMWORK - Cả nhóm cùng chung sức làm một việc
+DEADLINE - Hạn chót mà ai cũng sợ
+MEETING - Cuộc họp, có khi kéo dài cả buổi chiều
+BONUS - Khoản thưởng ai cũng mong cuối năm
+CUSTOMER - Người mua hàng, luôn là thượng đế
+STRATEGY - Kế hoạch dài hạn để đi tới mục tiêu
+INNOVATION - Nghĩ ra cách làm mới
+TARGET - Chỉ tiêu cần đạt trong kỳ
+FIREWORKS - Thứ bừng sáng trên trời lúc nửa đêm 31/12
+COUNTDOWN - Mười, chín, tám… cả phố cùng hô
+RESOLUTION - Lời hứa với bản thân cho năm mới
+CELEBRATE - Ăn mừng, liên hoan`;
 const SHAKE_MS = 900; // bao rung trước khi mở cho hồi hộp
 const SPIN_MS = 6500; // khớp transition .wheel trong globals.css
 const COUNT_FROM = 5;
@@ -94,6 +109,7 @@ export default function OrbPlay() {
   const [removeWinner, setRemoveWinner] = useState(false);
   const [sound, setSound] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [gameOn, setGameOn] = useState(false); // Giải mã/Khác biệt đang chạy ván
   const [rot, setRot] = useState(0);
   const [count, setCount] = useState(1);
   const [board, setBoard] = useState<BoardState>({ big: "Sẵn sàng", mode: "idle" });
@@ -102,6 +118,7 @@ export default function OrbPlay() {
   const [year, setYear] = useState<number | null>(null);
   const [tab, setTab] = useState("wheel");
   const [prizeText, setPrizeText] = useState(PRIZES);
+  const [wordText, setWordText] = useState(WORDS);
   const [envelopes, setEnvelopes] = useState<Envelope[]>([]);
   const [dealtFrom, setDealtFrom] = useState(""); // prizeText lúc xáo, khác thì báo xáo lại
   const [round, setRound] = useState(0);
@@ -120,6 +137,8 @@ export default function OrbPlay() {
   const timers = useRef<number[]>([]);
   const raf = useRef(0);
   const hideTimer = useRef(0);
+  const soundRef = useRef(true);
+  useEffect(() => { soundRef.current = sound; }, [sound]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const fw = useRef<ReturnType<typeof createFireworks> | null>(null);
   const wheelRef = useRef<SVGGElement>(null);
@@ -138,7 +157,8 @@ export default function OrbPlay() {
   }, []);
 
   const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
-  const play = (fn: () => void) => { if (sound) try { fn(); } catch { /* trình duyệt chặn audio thì im lặng */ } };
+  // đọc qua ref: timer/rAF đang chạy giữ closure cũ, tắt loa giữa ván vẫn phải im ngay
+  const play = (fn: () => void) => { if (soundRef.current) try { fn(); } catch { /* trình duyệt chặn audio thì im lặng */ } };
 
   // nổ pháo hoa ở phần tử vừa trúng (mặc định là bảng kết quả)
   const celebrate = (el: Element | null = boardRef.current) => {
@@ -240,6 +260,7 @@ export default function OrbPlay() {
   };
 
   const prizes = expandPrizes(prizeText);
+  const words = parseWords(wordText);
   const deal = () => {
     setEnvelopes(drawIndices(prizes.length, prizes.length).map((i) => ({ prize: prizes[i], opened: false })));
     setDealtFrom(prizeText);
@@ -310,7 +331,10 @@ export default function OrbPlay() {
         <Link href="/orbplay" className="font-display text-3xl font-extrabold tracking-tight">
           Orb<span className="text-primary">Play</span>
         </Link>
-        <Link href="/" className="ml-auto text-sm text-muted-foreground hover:text-foreground focus-visible:text-foreground">← Orbi</Link>
+        <Button variant="ghost" size="icon" className="ml-auto" aria-pressed={sound} aria-label={sound ? "Tắt âm thanh" : "Bật âm thanh"} onClick={() => setSound((v) => !v)}>
+          {sound ? <LuVolume2 aria-hidden /> : <LuVolumeX aria-hidden />}
+        </Button>
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground focus-visible:text-foreground">← Orbi</Link>
       </header>
 
       <section className="mt-6 flex flex-wrap items-end gap-x-6 gap-y-2">
@@ -321,8 +345,33 @@ export default function OrbPlay() {
         </div>
       </section>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {tab === "memory" ? (
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        {tab === "odd" ? (
+          <section className="rounded-xl border bg-card p-4" aria-labelledby="odd-title">
+            <h2 id="odd-title" className="font-display text-2xl font-bold">Điểm khác biệt</h2>
+            <p className="mt-1 text-muted-foreground">Thi mắt nhanh tay nhanh: trong lưới icon giống hệt nhau có đúng một ô khác. Tìm và bấm vào nó trước khi hết giờ.</p>
+            <ul className="mt-4 flex flex-col gap-2 text-sm">
+              <li className="rounded-lg bg-background px-3 py-2">Đúng: cộng điểm theo cỡ lưới, 3×3 được 15, 6×6 được 30</li>
+              <li className="rounded-lg bg-background px-3 py-2">Sai: trừ 3 giây</li>
+              <li className="rounded-lg bg-background px-3 py-2">Càng về sau lưới càng to, icon càng giống nhau</li>
+            </ul>
+          </section>
+        ) : tab === "word" ? (
+          <section className="rounded-xl border bg-card p-4" aria-labelledby="word-title">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="word-title" className="font-display text-2xl font-bold">Bộ từ khóa</h2>
+              <span className="text-sm text-muted-foreground">{words.length} từ</span>
+            </div>
+            <label htmlFor="words" className="mt-1 block text-sm text-muted-foreground">Mỗi dòng một từ, gợi ý viết sau dấu “ - ”. Có dấu tiếng Việt cũng được, lúc chấm sẽ bỏ dấu.</label>
+            <textarea
+              id="words"
+              value={wordText}
+              onChange={(e) => setWordText(e.target.value)}
+              rows={12}
+              className="mt-3 w-full resize-y rounded-lg border bg-background p-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+          </section>
+        ) : tab === "memory" ? (
           <section className="rounded-xl border bg-card p-4" aria-labelledby="mem-title">
             <h2 id="mem-title" className="font-display text-2xl font-bold">Lật thẻ ký ức</h2>
             <p className="mt-1 text-sm text-muted-foreground">Mỗi lượt lật 2 thẻ. Giống nhau thì giữ lại, ghép hết các cặp là thắng.</p>
@@ -389,18 +438,15 @@ export default function OrbPlay() {
         </section>
         )}
 
-        <Tabs value={tab} onValueChange={(v) => { setTab(v); setBoard(idle); if (v === "memory" && !mem) newGame(level); }} className="rounded-xl border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <TabsList className="flex-1 max-sm:[&_svg]:hidden">
-              <TabsTrigger value="wheel" disabled={busy}><LuRotateCw aria-hidden /> Vòng quay</TabsTrigger>
-              <TabsTrigger value="draw" disabled={busy}><LuTicket aria-hidden /> Bốc thăm</TabsTrigger>
-              <TabsTrigger value="lixi" disabled={busy}><LuGift aria-hidden /> Lì xì</TabsTrigger>
-              <TabsTrigger value="memory" disabled={busy}><LuBrain aria-hidden /> Lật thẻ</TabsTrigger>
-            </TabsList>
-            <Button variant="ghost" size="icon" aria-pressed={sound} aria-label={sound ? "Tắt âm thanh" : "Bật âm thanh"} onClick={() => setSound((v) => !v)}>
-              {sound ? <LuVolume2 aria-hidden /> : <LuVolumeX aria-hidden />}
-            </Button>
-          </div>
+        <Tabs value={tab} onValueChange={(v) => { setTab(v); setBoard(idle); if (v === "memory" && !mem) newGame(level); }} className="rounded-xl border bg-card p-3 sm:p-4">
+          <TabsList className="w-full max-sm:grid max-sm:h-auto max-sm:grid-cols-3 max-sm:[&_svg]:hidden">
+              <TabsTrigger value="wheel" disabled={busy || gameOn}><LuRotateCw aria-hidden /> Vòng quay</TabsTrigger>
+              <TabsTrigger value="draw" disabled={busy || gameOn}><LuTicket aria-hidden /> Bốc thăm</TabsTrigger>
+              <TabsTrigger value="lixi" disabled={busy || gameOn}><LuGift aria-hidden /> Lì xì</TabsTrigger>
+              <TabsTrigger value="memory" disabled={busy || gameOn}><LuBrain aria-hidden /> Lật thẻ</TabsTrigger>
+              <TabsTrigger value="word" disabled={busy || gameOn}><LuSpellCheck aria-hidden /> Giải mã</TabsTrigger>
+              <TabsTrigger value="odd" disabled={busy || gameOn}><LuScanSearch aria-hidden /> Khác biệt</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="wheel" className="mt-4 flex flex-col items-center gap-4">
             <Board {...shown} boardRef={boardRef} />
@@ -460,6 +506,14 @@ export default function OrbPlay() {
                 </Button>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="word" className="mt-4">
+            <WordGame words={words} onPlaying={setGameOn} play={play} celebrate={celebrate} announce={setAnnounce} />
+          </TabsContent>
+
+          <TabsContent value="odd" className="mt-4">
+            <OddGame onPlaying={setGameOn} play={play} celebrate={celebrate} announce={setAnnounce} />
           </TabsContent>
 
           <TabsContent value="memory" className="mt-4 flex flex-col items-center gap-4">

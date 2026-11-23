@@ -225,8 +225,24 @@
   .face-3 { color: var(--seg-3); }
   .face-4 { color: var(--seg-4); }
   .face-5 { color: var(--seg-5); }
+  /* giải mã từ khóa: ô chữ vàng như biển đèn, thanh giờ cạn dần */
+  .tile { display: grid; place-items: center; width: clamp(2.1rem, 9vw, 3rem); aspect-ratio: 1; border-radius: var(--radius-md); background: var(--primary); color: var(--primary-foreground); font-family: var(--font-display); font-weight: 800; font-size: clamp(1.3rem, 5vw, 1.9rem); box-shadow: 0 3px 0 color-mix(in oklab, var(--primary) 50%, black); }
+  .tile[data-state="right"] { box-shadow: 0 0 16px color-mix(in oklab, var(--primary) 70%, transparent); }
+  .tile[data-state="wrong"] { background: var(--muted); color: var(--foreground); box-shadow: inset 0 0 0 2px var(--destructive); }
+  .timebar { height: 6px; border-radius: 999px; background: linear-gradient(var(--primary), var(--primary)) left / calc(var(--left) * 100%) 100% no-repeat, var(--muted); transition: background-size .2s linear; }
+  .timebar[data-urgent] { background-image: linear-gradient(var(--destructive), var(--destructive)); }
+  /* điểm khác biệt: lưới --n × --n, icon chiếm nửa ô nên co theo cỡ lưới */
+  .odd-grid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: clamp(.3rem, 1.5vw, .6rem); }
+  .odd-cell { display: grid; place-items: center; width: 100%; aspect-ratio: 1; border-radius: var(--radius-md); background: var(--background); box-shadow: inset 0 0 0 1px var(--border); cursor: pointer; transition: transform .1s; }
+  .odd-cell svg { width: 48%; height: 48%; }
+  .odd-cell:hover { box-shadow: inset 0 0 0 2px var(--primary); }
+  .odd-cell:active { transform: scale(.94); }
+  .odd-cell:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+  .odd-cell[data-wrong] { outline: 3px dashed var(--destructive); outline-offset: -4px; animation: nope .35s; }
   @media (prefers-reduced-motion: reduce) {
     .wheel-svg .wheel { transition: none; }
+    .odd-cell[data-wrong] { animation: none; }
+    .timebar { transition: none; }
     .mcard-inner { transition: none; }
     .mcard[data-miss] .mcard-front { animation: none; }
     .envelope-deal { animation: none; }
