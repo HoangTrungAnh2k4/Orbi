@@ -8,6 +8,10 @@
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-marquee: var(--font-marquee);
+  --text-year: clamp(5.5rem, 24vw, 10rem);
+  --text-year--line-height: 0.8;
   --text-wordmark: clamp(3rem, 5vw, 4.5rem);
   --text-wordmark--line-height: 0.85;
   --color-ring: var(--ring);
@@ -77,6 +81,33 @@
   --destructive: #b42339;
 }
 
+/* OrbPlay: đêm giao thừa 31/12, trời nửa đêm xanh mực, pháo hoa champagne và bạc, đèn bảng đếm ngược */
+:root:has([data-tool="orbplay"]) {
+  --background: #0c1d3d;
+  --foreground: #f3f6ff;
+  --card: #142a52;
+  --card-foreground: #f3f6ff;
+  --popover: #142a52;
+  --popover-foreground: #f3f6ff;
+  --muted: #1d3766;
+  --muted-foreground: #aebde0;
+  --primary: #f7d27a;
+  --primary-foreground: #0c1d3d;
+  --border: #6a87bd;
+  --input: #6a87bd;
+  --ring: #f7d27a;
+  --destructive: #ff8fa8;
+  --sky-glow: #1f4282;
+  --envelope: #c62839;
+  --envelope-dark: #8f1424;
+  --seg-0: #f7d27a;
+  --seg-1: #e6ebf5;
+  --seg-2: #ff86b0;
+  --seg-3: #7fe0ff;
+  --seg-4: #fff1c9;
+  --seg-5: #b8a2ff;
+}
+
 @layer base {
   * { @apply border-border outline-ring/50; }
   html { @apply font-sans; }
@@ -143,8 +174,69 @@
   .orrery .spin.counter { animation-name: orbit-back; }
   .orrery:hover .spin { animation-play-state: paused; }
   @media (prefers-reduced-motion: reduce) { .orrery .spin { animation-play-state: paused; } }
+  /* OrbPlay: trời có quầng sáng phía trên như ánh pháo hoa xa */
+  :root:has([data-tool="orbplay"]) body { background-image: radial-gradient(ellipse 90% 50% at 50% 0%, var(--sky-glow), transparent 70%); background-repeat: no-repeat; }
+  .board { background: color-mix(in oklab, var(--background) 75%, transparent); transition: border-color .3s, box-shadow .3s; }
+  .board[data-mode="win"] { border-color: var(--primary); box-shadow: 0 0 28px color-mix(in oklab, var(--primary) 35%, transparent); }
+
+  /* vòng quay SVG, góc quay truyền qua --rot; ease-out dài để mấy ô cuối bò chậm qua kim */
+  .wheel-svg .wheel { transform: rotate(var(--rot, 0deg)); transition: transform 6.5s cubic-bezier(.12, .68, .06, 1); }
+  .wheel-svg .seg { stroke: var(--background); stroke-width: 1.2; }
+  .wheel-svg.dense .seg { stroke-width: 0.15; } /* ô mỏng cỡ 1°, viền dày sẽ phủ kín màu */
+  .wheel-svg .seg-0 { fill: var(--seg-0); }
+  .wheel-svg .seg-1 { fill: var(--seg-1); }
+  .wheel-svg .seg-2 { fill: var(--seg-2); }
+  .wheel-svg .seg-3 { fill: var(--seg-3); }
+  .wheel-svg .seg-4 { fill: var(--seg-4); }
+  .wheel-svg .seg-5 { fill: var(--seg-5); }
+  .wheel-svg .seg-label { fill: var(--primary-foreground); font-family: var(--font-display); font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+  .wheel-svg .rim { fill: var(--muted); stroke: var(--primary); stroke-width: 1.2; }
+  .wheel-svg .bulb { fill: var(--primary); filter: drop-shadow(0 0 2px var(--primary)); }
+  .wheel-svg.spinning .bulb { animation: bulb .5s steps(1) infinite; }
+  .wheel-svg.spinning .bulb:nth-child(even) { animation-delay: .25s; }
+  .wheel-svg .hub { fill: var(--background); stroke: var(--primary); stroke-width: 3; }
+  .wheel-svg .pointer { fill: var(--foreground); stroke: var(--background); stroke-width: 2; stroke-linejoin: round; transform-box: fill-box; transform-origin: 50% 0; filter: drop-shadow(0 2px 3px var(--background)); }
+  /* bao lì xì: thân đỏ, nắp tam giác đỏ thẫm, dấu "Lộc" vàng */
+  .envelope { position: relative; display: flex; width: 100%; aspect-ratio: 3 / 4; align-items: center; justify-content: center; overflow: hidden; border-radius: var(--radius); background: var(--envelope); box-shadow: 0 4px 0 var(--envelope-dark); cursor: pointer; transition: transform .15s; }
+  .envelope::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 42%; background: var(--envelope-dark); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  .envelope:not(:disabled):hover { transform: translateY(-3px) rotate(-2deg); }
+  .envelope:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+  .envelope:disabled { cursor: default; }
+  .envelope .seal { position: relative; display: grid; place-items: center; width: 46%; aspect-ratio: 1; margin-top: 12%; border-radius: 50%; background: var(--primary); color: var(--envelope-dark); font-family: var(--font-display); font-weight: 800; font-size: clamp(.8rem, 3vw, 1.1rem); box-shadow: 0 0 0 3px var(--envelope-dark); }
+  .envelope[data-opened] { background: var(--background); box-shadow: inset 0 0 0 2px var(--primary); }
+  .envelope[data-opened]::before { display: none; }
+  .envelope-deal { animation: deal .45s cubic-bezier(.2, .8, .3, 1.25) backwards; animation-delay: calc(var(--i) * 35ms); }
+  /* thẻ ký ức: lật 3D, lưng xanh chấm vàng, mặt tối với icon màu pháo hoa */
+  .mcard { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: var(--radius); perspective: 700px; cursor: pointer; }
+  .mcard[aria-disabled="true"] { cursor: default; }
+  .mcard:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+  .mcard-inner { position: relative; display: block; width: 100%; height: 100%; border-radius: inherit; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.3, 1.4, .5, 1); }
+  .mcard[data-up] .mcard-inner { transform: rotateY(180deg); }
+  .mcard:not([data-up]):hover .mcard-inner { transform: translateY(-3px) rotateY(-12deg); }
+  .mcard-face { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; backface-visibility: hidden; font-size: clamp(1.5rem, 7vw, 2.5rem); }
+  .mcard-back { color: var(--primary); background: radial-gradient(circle, color-mix(in oklab, var(--primary) 35%, transparent) 0 1.5px, transparent 2px) 0 0 / 12px 12px, var(--muted); box-shadow: inset 0 0 0 2px var(--border); }
+  .mcard-front { transform: rotateY(180deg); background: var(--background); box-shadow: inset 0 0 0 2px var(--border); }
+  .mcard[data-matched] .mcard-front { box-shadow: inset 0 0 0 3px var(--primary), 0 0 18px color-mix(in oklab, var(--primary) 45%, transparent); }
+  /* sai: viền nét đứt, không chỉ đổi màu */
+  .mcard[data-miss] .mcard-front { box-shadow: none; outline: 3px dashed var(--destructive); outline-offset: -5px; animation: nope .4s .45s; }
+  .face-0 { color: var(--seg-0); }
+  .face-1 { color: var(--seg-1); }
+  .face-2 { color: var(--seg-2); }
+  .face-3 { color: var(--seg-3); }
+  .face-4 { color: var(--seg-4); }
+  .face-5 { color: var(--seg-5); }
+  @media (prefers-reduced-motion: reduce) {
+    .wheel-svg .wheel { transition: none; }
+    .mcard-inner { transition: none; }
+    .mcard[data-miss] .mcard-front { animation: none; }
+    .envelope-deal { animation: none; }
+    .wheel-svg.spinning .bulb { animation: none; }
+  }
 }
 
+@keyframes nope { 25% { translate: -4px 0; } 75% { translate: 4px 0; } }
+@keyframes deal { from { opacity: 0; transform: translateY(-40px) rotate(-14deg) scale(.6); } }
+@keyframes bulb { 50% { fill: var(--muted); filter: none; } }
 @keyframes orbit { from { transform: rotate(var(--a)); } to { transform: rotate(calc(var(--a) + 360deg)); } }
 @keyframes orbit-back { from { transform: rotate(calc(-1 * var(--a))); } to { transform: rotate(calc(-1 * var(--a) - 360deg)); } }
 
