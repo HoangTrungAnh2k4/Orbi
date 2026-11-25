@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { clientIp, rateLimit } from "@/lib/rateLimit";
-import { sanitizeConfig } from "../config";
+import { forPlayers, sanitizeConfig } from "../config";
 import { loadConfig, saveConfig } from "../store";
 
 export const dynamic = "force-dynamic";
@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 // so mật khẩu theo thời gian hằng, băm trước để độ dài khác nhau cũng không lộ qua thời gian
 const same = (a: string, b: string) => timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest());
 
-// GET /orbplay/settings → cấu hình hiện tại (public, trang chơi cũng đọc được)
+// GET /orbplay/settings → cấu hình hiện tại (public; khóa thì bỏ phiếu đấu giá)
 export async function GET() {
-  return Response.json(await loadConfig(), { headers: { "Cache-Control": "no-store" } });
+  return Response.json(forPlayers(await loadConfig()), { headers: { "Cache-Control": "no-store" } });
 }
 
 // PUT /orbplay/settings, header x-admin-password, body là OrbPlayConfig → lưu và trả lại bản đã làm sạch

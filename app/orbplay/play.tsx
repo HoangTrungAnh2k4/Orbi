@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { display, marquee } from "./fonts";
 import { useEffect, useRef, useState } from "react";
-import { LuBrain, LuDices, LuGift, LuRotateCcw, LuRotateCw, LuScanSearch, LuSettings, LuShuffle, LuSmilePlus, LuSpellCheck, LuTicket, LuTrash2, LuVolume2, LuVolumeX } from "react-icons/lu";
+import { LuBrain, LuDices, LuGift, LuRotateCcw, LuRotateCw, LuSettings, LuShuffle, LuTrash2, LuVolume2, LuVolumeX } from "react-icons/lu";
+import { GAME_ICON } from "./icons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { drawIndices, expandPrizes, parseEntries, segmentAt, spinTo } from "./random";
@@ -12,6 +13,8 @@ import { MemoryBoard } from "./cards";
 import { WordGame } from "./word";
 import { OddGame } from "./oddgame";
 import { EmojiGame } from "./emojigame";
+import { AuctionGame } from "./auctiongame";
+import { parseBids, resolveAuction, type AuctionResult } from "./auction";
 import { parseEmoji } from "./emoji";
 import { parseWords } from "./scramble";
 import { flip, hideOpen, newMemory, solved, type Memory } from "./memory";
@@ -89,10 +92,8 @@ function Board({ big, small, mode, boardRef }: BoardState & { boardRef: React.Re
   );
 }
 
-// icon tab của từng game
-const TAB_ICON = { wheel: LuRotateCw, draw: LuTicket, lixi: LuGift, memory: LuBrain, word: LuSpellCheck, odd: LuScanSearch, emoji: LuSmilePlus };
-
-export function OrbPlay({ config }: { config: OrbPlayConfig }) {
+// auction: kết quả server tính sẵn khi admin khóa (config.bids lúc đó rỗng)
+export function OrbPlay({ config, auction }: { config: OrbPlayConfig; auction?: AuctionResult }) {
   const games = GAMES.filter((g) => config.enabled[g.id]);
   const edit = !config.locked; // admin khóa thì người chơi chỉ xem danh sách
   const [text, setText] = useState(config.people);
@@ -110,6 +111,8 @@ export function OrbPlay({ config }: { config: OrbPlayConfig }) {
   const [prizeText, setPrizeText] = useState(config.prizes);
   const [wordText, setWordText] = useState(config.words);
   const [emojiText, setEmojiText] = useState(config.emojis);
+  const [bidText, setBidText] = useState(config.bids);
+  const [auctionPrize, setAuctionPrize] = useState(config.auction.prize);
   const [envelopes, setEnvelopes] = useState<Envelope[]>([]);
   const [dealtFrom, setDealtFrom] = useState(""); // prizeText lúc xáo, khác thì báo xáo lại
   const [round, setRound] = useState(0);
@@ -253,6 +256,8 @@ export function OrbPlay({ config }: { config: OrbPlayConfig }) {
   const prizes = expandPrizes(prizeText);
   const words = parseWords(wordText);
   const emojis = parseEmoji(emojiText);
+  const bids = parseBids(bidText);
+  const auctionRes = auction ?? resolveAuction(bids.bids);
   const deal = () => {
     setEnvelopes(drawIndices(prizes.length, prizes.length).map((i) => ({ prize: prizes[i], opened: false })));
     setDealtFrom(prizeText);
@@ -342,7 +347,51 @@ export function OrbPlay({ config }: { config: OrbPlayConfig }) {
 
       {!games.length && <p className="mt-8 rounded-xl border bg-card p-6 text-center text-muted-foreground">Ban tổ chức đang tắt hết trò chơi.</p>}
       <div hidden={!games.length} className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {tab === "emoji" ? (
+        {tab === "auction" ? (
+          <section className="rounded-xl border bg-card p-4" aria-labelledby="bid-title">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="bid-title" className="font-display text-2xl font-bold">Phiếu đấu giá</h2>
+              <span className="text-sm text-muted-foreground">{auctionRes.count} phiếu</span>
+            </div>
+            {edit ? (
+              <>
+                <label htmlFor="auction-prize" className="mt-3 block text-sm text-muted-foreground">Gói quà</label>
+                <input
+                  id="auction-prize"
+                  value={auctionPrize}
+                  onChange={(e) => setAuctionPrize(e.target.value)}
+                  maxLength={200}
+                  className="mt-1 h-11 w-full rounded-lg border bg-background px-3 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+                <label htmlFor="bids" className="mt-3 block text-sm text-muted-foreground">Mỗi dòng “Tên - số”, dán thẳng từ bảng tính cũng được (lấy 2 cột cuối: tên, số). Một người nộp nhiều lần thì lấy lần cuối. Ô bị làm mờ, bấm vào mới đọc được.</label>
+                <textarea
+                  id="bids"
+                  value={bidText}
+                  onChange={(e) => setBidText(e.target.value)}
+                  disabled={gameOn}
+                  rows={12}
+                  // làm mờ khi không gõ: màn chiếu đang mở tab này thì cả hội trường không đọc được số
+                  className="mt-1 w-full resize-y rounded-lg border bg-background p-3 text-base blur-sm outline-none transition-[filter] focus:blur-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+                />
+              </>
+            ) : (
+              // khóa thì không hiện phiếu, đấu giá kín mà lộ số là hỏng trò
+              <p className="mt-2 text-muted-foreground">Phiếu do ban tổ chức thu kín, chỉ lộ khi công bố.</p>
+            )}
+            {bids.replaced.length > 0 && (
+              <p role="status" className="mt-3 text-sm text-primary">
+                {bids.replaced.length} phiếu trùng tên người đã nộp, chỉ giữ phiếu sau cùng{edit && `: ${[...new Set(bids.replaced)].slice(0, 3).join(" · ")}${bids.replaced.length > 3 ? "…" : ""}`}. Nếu là 2 người khác nhau thì thêm gì đó vào tên để phân biệt.
+              </p>
+            )}
+            {bids.invalid.length > 0 && (
+              <p role="status" className="mt-3 text-sm text-destructive">
+                Bỏ qua {bids.invalid.length} dòng không phải “Tên - số nguyên dương”{edit && ": "}
+                {/* dòng lỗi có thể chứa số thật, làm mờ như ô phiếu, trỏ hoặc focus vào mới đọc */}
+                {edit && <span tabIndex={0} className="rounded blur-sm transition-[filter] outline-none hover:blur-none focus:blur-none focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none">{bids.invalid.slice(0, 3).join(" · ")}{bids.invalid.length > 3 ? "…" : ""}</span>}
+              </p>
+            )}
+          </section>
+        ) : tab === "emoji" ? (
           <section className="rounded-xl border bg-card p-4" aria-labelledby="emoji-title">
             <div className="flex items-center justify-between gap-2">
               <h2 id="emoji-title" className="font-display text-2xl font-bold">Bộ câu đố emoji</h2>
@@ -479,7 +528,7 @@ export function OrbPlay({ config }: { config: OrbPlayConfig }) {
         <Tabs value={tab} onValueChange={(v) => { setTab(v); setBoard(idle); if (v === "memory" && !mem) newGame(level); }} className="rounded-xl border bg-card p-3 sm:p-4">
           <TabsList className={`w-full max-sm:[&_svg]:hidden ${games.length > 3 ? "h-auto! flex-wrap max-sm:grid max-sm:grid-cols-3" : ""}`}>
             {games.map(({ id, label }) => {
-              const Icon = TAB_ICON[id];
+              const Icon = GAME_ICON[id];
               return <TabsTrigger key={id} value={id} disabled={busy || gameOn}><Icon aria-hidden /> {label}</TabsTrigger>;
             })}
           </TabsList>
@@ -554,6 +603,11 @@ export function OrbPlay({ config }: { config: OrbPlayConfig }) {
 
           <TabsContent value="emoji" className="mt-4">
             <EmojiGame items={emojis} rounds={config.emoji.rounds} seconds={config.emoji.seconds} onPlaying={setGameOn} play={play} celebrate={celebrate} announce={setAnnounce} />
+          </TabsContent>
+
+          <TabsContent value="auction" className="mt-4">
+            {/* key: đổi phiếu thì kết quả cũ hết đúng, làm lại từ đầu */}
+            <AuctionGame key={bidText} result={auctionRes} prize={auctionPrize} onPlaying={setGameOn} play={play} celebrate={celebrate} announce={setAnnounce} />
           </TabsContent>
 
           <TabsContent value="memory" className="mt-4 flex flex-col items-center gap-4">

@@ -8,5 +8,5 @@ export const metadata: Metadata = { title: "Cài đặt OrbPlay", robots: { inde
 
 export default async function Page() {
   const initial = await loadConfig(true).catch(() => null);
-  return <AdminForm initial={initial ?? DEFAULT_CONFIG} loadError={!initial} />;
+  return <AdminForm initial={initial ?? DEFAULT_CONFIG} loadError={!initial} canSave={!!process.env.ORBPLAY_ADMIN_PASSWORD} />;
 }

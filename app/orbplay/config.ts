@@ -8,6 +8,7 @@ export const GAMES = [
   { id: "word", label: "Giải mã" },
   { id: "odd", label: "Khác biệt" },
   { id: "emoji", label: "Đoán emoji" },
+  { id: "auction", label: "Đấu giá ngược" },
 ] as const;
 export type GameId = (typeof GAMES)[number]["id"];
 
@@ -18,18 +19,20 @@ export type OrbPlayConfig = {
   prizes: string;
   words: string;
   emojis: string;
+  bids: string; // "Tên - số" mỗi dòng, BTC dán từ form thu phiếu
   draw: { countFrom: number };
   memory: { pairs: number };
   word: { rounds: number; seconds: number };
   odd: { seconds: number; penalty: number };
   emoji: { rounds: number; seconds: number };
+  auction: { prize: string };
 };
 
 export const MEMORY_LEVELS = [{ label: "Dễ", pairs: 6 }, { label: "Vừa", pairs: 8 }, { label: "Khó", pairs: 12 }];
 const MAX_TEXT = 20_000; // ~ vài nghìn dòng, đủ cho 300+ người mà không để ai nhét cả MB vào KV
 
 export const DEFAULT_CONFIG: OrbPlayConfig = {
-  enabled: { wheel: true, draw: true, lixi: true, memory: true, word: true, odd: true, emoji: true },
+  enabled: { wheel: true, draw: true, lixi: true, memory: true, word: true, odd: true, emoji: true, auction: true },
   locked: false,
   people: "An\nBình\nChi\nDũng\nGiang\nHà",
   prizes: "500.000đ\n200.000đ x2\n100.000đ x3\n50.000đ x4\nChúc may mắn lần sau x2",
@@ -57,11 +60,13 @@ CELEBRATE - Ăn mừng, liên hoan`,
 ✈️🏖️🚌☀️ - Du lịch hè cùng công ty
 📊📈🎯💵 - Vượt chỉ tiêu doanh số
 🎂🎈🥳🍰 - Sinh nhật đồng nghiệp`,
+  bids: "An - 1\nBình - 1\nChi - 2\nDũng - 3\nGiang - 2\nHà - 5",
   draw: { countFrom: 5 },
   memory: { pairs: 8 },
   word: { rounds: 5, seconds: 30 },
   odd: { seconds: 45, penalty: 3 },
   emoji: { rounds: 8, seconds: 15 },
+  auction: { prize: "200 Xu + Vé nghỉ trưa 2 tiếng" },
 };
 
 // giới hạn từng thông số, admin nhập ngoài khoảng thì kẹp lại
@@ -85,7 +90,7 @@ export function sanitizeConfig(input: unknown): OrbPlayConfig {
   const c = isObj(input) ? input : {};
   const d = DEFAULT_CONFIG;
   const en = isObj(c.enabled) ? c.enabled : {};
-  const draw = sub(c, "draw"), memory = sub(c, "memory"), word = sub(c, "word"), odd = sub(c, "odd"), emoji = sub(c, "emoji");
+  const draw = sub(c, "draw"), memory = sub(c, "memory"), word = sub(c, "word"), odd = sub(c, "odd"), emoji = sub(c, "emoji"), auction = sub(c, "auction");
   return {
     enabled: Object.fromEntries(GAMES.map(({ id }) => [id, typeof en[id] === "boolean" ? en[id] : d.enabled[id]])) as Record<GameId, boolean>,
     locked: typeof c.locked === "boolean" ? c.locked : d.locked,
@@ -93,10 +98,16 @@ export function sanitizeConfig(input: unknown): OrbPlayConfig {
     prizes: text(c.prizes, d.prizes),
     words: text(c.words, d.words),
     emojis: text(c.emojis, d.emojis),
+    bids: text(c.bids, d.bids),
     draw: { countFrom: int(draw.countFrom, LIMITS.countFrom, d.draw.countFrom) },
     memory: { pairs: MEMORY_LEVELS.some((l) => l.pairs === memory.pairs) ? (memory.pairs as number) : d.memory.pairs },
     word: { rounds: int(word.rounds, LIMITS.rounds, d.word.rounds), seconds: int(word.seconds, LIMITS.wordSeconds, d.word.seconds) },
     odd: { seconds: int(odd.seconds, LIMITS.oddSeconds, d.odd.seconds), penalty: int(odd.penalty, LIMITS.penalty, d.odd.penalty) },
     emoji: { rounds: int(emoji.rounds, LIMITS.rounds, d.emoji.rounds), seconds: int(emoji.seconds, LIMITS.emojiSeconds, d.emoji.seconds) },
+    auction: { prize: text(auction.prize, d.auction.prize).slice(0, 200) },
   };
 }
+
+// bản gửi cho người chơi (trang chơi, GET public): khóa thì bỏ phiếu đấu giá thô, đấu giá kín mà lộ số là hỏng trò
+// shortcut: bộ từ khóa/emoji vẫn gửi nguyên vì game chấm ở client, cần ẩn thật thì phải chuyển chấm điểm lên server
+export const forPlayers = (c: OrbPlayConfig): OrbPlayConfig => (c.locked ? { ...c, bids: "" } : c);

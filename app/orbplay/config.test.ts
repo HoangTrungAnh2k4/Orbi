@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_CONFIG, sanitizeConfig } from "./config.ts";
+import { DEFAULT_CONFIG, forPlayers, sanitizeConfig } from "./config.ts";
 
 test("rác hoặc rỗng thì ra cấu hình mặc định", () => {
   for (const bad of [null, undefined, 42, "x", [], {}]) assert.deepEqual(sanitizeConfig(bad), DEFAULT_CONFIG);
@@ -35,4 +35,16 @@ test("giữ giá trị hợp lệ, kẹp số ngoài khoảng, bỏ sai kiểu",
 
 test("cắt text quá dài", () => {
   assert.equal(sanitizeConfig({ words: "x".repeat(50_000) }).words.length, 20_000);
+  assert.equal(sanitizeConfig({ auction: { prize: "x".repeat(500) } }).auction.prize.length, 200);
+});
+
+test("phiếu và gói quà đấu giá: giữ chuỗi hợp lệ, sai kiểu thì mặc định", () => {
+  assert.equal(sanitizeConfig({ bids: "An - 1" }).bids, "An - 1");
+  assert.equal(sanitizeConfig({ bids: 1, auction: { prize: null } }).bids, DEFAULT_CONFIG.bids);
+  assert.equal(sanitizeConfig({ auction: "x" }).auction.prize, DEFAULT_CONFIG.auction.prize);
+});
+
+test("forPlayers: khóa thì bỏ phiếu đấu giá, mở thì giữ nguyên", () => {
+  assert.equal(forPlayers({ ...DEFAULT_CONFIG, locked: true }).bids, "");
+  assert.equal(forPlayers(DEFAULT_CONFIG).bids, DEFAULT_CONFIG.bids);
 });
